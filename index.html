@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Pendidikan</title>
-    <!-- Menambahkan script library untuk QR Scanner -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         * {
@@ -19,7 +18,7 @@
             color: #333;
         }
 
-        /* Bagian Header Hijau Atas */
+        /* Header Hijau Atas */
         .header-bg {
             background-color: #317f43;
             color: white;
@@ -54,7 +53,7 @@
         .status-indicator { font-size: 14px; font-weight: bold; color: #00c853; }
         .status-desc { font-size: 13px; color: #666; }
 
-        /* Tombol Aksi */
+        /* Tombol Menu */
         .btn-card {
             display: block;
             background-color: #48a04d;
@@ -78,12 +77,12 @@
         .instruction-list { padding-left: 20px; font-size: 14px; color: #444; line-height: 1.5; }
         .instruction-list li { margin-bottom: 12px; padding-left: 5px; }
 
-        /* Modal Kamera Scanner */
-        #scanner-modal {
-            display: none; /* Sembunyikan by default */
+        /* Jendela Modal (Scanner & Input NIS) */
+        .modal-overlay {
+            display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0, 0, 0, 0.85);
             z-index: 9999;
             flex-direction: column;
             justify-content: center;
@@ -99,19 +98,59 @@
             overflow: hidden;
         }
 
-        .close-scanner-btn {
-            margin-top: 20px;
+        /* Box Desain Input NIS */
+        .nis-box {
+            background-color: white;
+            width: 100%;
+            max-width: 350px;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .nis-box h3 { margin-bottom: 10px; color: #2a6a38; }
+        .nis-box p { font-size: 13px; color: #666; margin-bottom: 15px; }
+        
+        .nis-box input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            outline: none;
+        }
+        .nis-box input:focus { border-color: #48a04d; }
+
+        .btn-submit-nis {
+            width: 100%;
+            padding: 12px;
+            background-color: #48a04d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .close-btn {
             padding: 12px 24px;
             background-color: #d32f2f;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
             max-width: 400px;
         }
+        
+        .nis-box .close-btn { width: 100%; }
     </style>
 </head>
 <body>
@@ -131,7 +170,6 @@
             <div class="status-desc">Aplikasi siap digunakan untuk ujian atau absen harian.</div>
         </div>
 
-        <!-- Tombol Scanner yang sudah difungsikan -->
         <button id="btn-scan" class="card btn-card">
             <span class="btn-title">Pindai QR Ujian</span>
             <span class="btn-desc">Ketuk untuk mulai scan soal</span>
@@ -142,30 +180,39 @@
             <span class="btn-desc">Mulai absensi koordinat sekolah</span>
         </a>
 
-        <a href="https://abuaslamuddin-art.github.io/absen-pkl/" class="card btn-card">
+        <button id="btn-pkl" class="card btn-card">
             <span class="btn-title">Absen PKL</span>
             <span class="btn-desc">Mulai absensi di lokasi tempat magang/industri</span>
-        </a>
+        </button>
     </div>
 
     <div class="instructions">
         <div class="instruction-title">Cara Menggunakan</div>
         <ol class="instruction-list">
             <li>Pastikan koneksi internet stabil sebelum beraktivitas.</li>
-            <li>Untuk Absen, klik menu Absen Harian atau Absen PKL untuk langsung menuju sistem peta radius lokasi Anda.</li>
+            <li>Untuk Absen Harian, langsung klik menu Absen Harian.</li>
+            <li>Untuk Absen PKL, Anda harus memasukkan NIS valid yang terdaftar sebagai peserta magang aktif.</li>
             <li>Untuk Ujian, mintalah QR Code soal ujian dari pengawas kelas.</li>
-            <li>Kerjakan ujian dengan jujur. Sistem mendeteksi kecurangan.</li>
         </ol>
     </div>
 
-    <!-- Area Layar Kamera (Disembunyikan di awal) -->
-    <div id="scanner-modal">
+    <div id="scanner-modal" class="modal-overlay">
         <div id="reader"></div>
-        <button id="btn-close-scan" class="close-scanner-btn">Batal & Tutup Kamera</button>
+        <button id="btn-close-scan" class="close-btn" style="margin-top: 20px;">Batal & Tutup Kamera</button>
+    </div>
+
+    <div id="nis-modal" class="modal-overlay">
+        <div class="nis-box">
+            <h3>Verifikasi Siswa PKL</h3>
+            <p>Silakan masukkan Nomor Induk Siswa (NIS) Anda untuk membuka gerbang absensi PKL.</p>
+            <input type="number" id="input-nis" placeholder="Masukkan NIS Anda..." pattern="[0-9]*" inputmode="numeric">
+            <button id="btn-submit-nis" class="btn-submit-nis">Verifikasi & Masuk</button>
+            <button id="btn-close-nis" class="close-btn">Batal</button>
+        </div>
     </div>
 
     <script>
-        // 1. Script Jam Realtime
+        // --- 1. JALUR JAM REALTIME ---
         function updateClock() {
             const now = new Date();
             const optionsDate = { day: 'numeric', month: 'long', year: 'numeric' };
@@ -178,51 +225,97 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. Script QR Code Scanner
+        // --- 2. JALUR QR SCANNER ---
         let html5QrCode;
         const btnScan = document.getElementById('btn-scan');
-        const modal = document.getElementById('scanner-modal');
-        const btnClose = document.getElementById('btn-close-scan');
+        const scannerModal = document.getElementById('scanner-modal');
+        const btnCloseScan = document.getElementById('btn-close-scan');
 
         btnScan.addEventListener('click', function() {
-            // Tampilkan layar hitam kamera
-            modal.style.display = 'flex';
-            
-            // Inisialisasi scanner
+            scannerModal.style.display = 'flex';
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-            // Mulai kamera belakang (environment)
             html5QrCode.start(
                 { facingMode: "environment" }, 
                 config, 
-                // Jika QR berhasil dibaca:
-                (decodedText, decodedResult) => {
+                (decodedText) => {
                     html5QrCode.stop().then(() => {
-                        modal.style.display = 'none';
-                        // Langsung arahkan (redirect) ke web soal ujian yang didapat dari QR
+                        scannerModal.style.display = 'none';
                         window.location.href = decodedText;
                     });
                 },
-                // Jika gagal membaca per frame (diabaikan saja agar terus mencari)
-                (errorMessage) => { }
-            ).catch((err) => {
-                alert("Gagal mengakses kamera. Pastikan Anda telah mengizinkan akses kamera di browser.");
-                modal.style.display = 'none';
+                () => { }
+            ).catch(() => {
+                alert("Gagal mengakses kamera.");
+                scannerModal.style.display = 'none';
             });
         });
 
-        // Fungsi tombol tutup kamera
-        btnClose.addEventListener('click', function() {
+        btnCloseScan.addEventListener('click', function() {
             if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    modal.style.display = 'none';
-                }).catch(err => {
-                    modal.style.display = 'none';
-                });
-            } else {
-                modal.style.display = 'none';
+                html5QrCode.stop().then(() => { scannerModal.style.display = 'none'; }).catch(() => { scannerModal.style.display = 'none'; });
+            } else { scannerModal.style.display = 'none'; }
+        });
+
+
+        // --- 3. JALUR VALIDASI NIS VIA GOOGLE SHEETS ---
+        // PENTING: Ganti isi string di bawah ini dengan URL Web App Apps Script Anda!
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3EmyN-JF_qCIjz3AAPN7_Hyk4_pdmQTOKuS8iY44H2p6DUS3wzvyzM7C5c2njy2JF/exec";
+
+        const btnPkl = document.getElementById('btn-pkl');
+        const nisModal = document.getElementById('nis-modal');
+        const btnCloseNis = document.getElementById('btn-close-nis');
+        const btnSubmitNis = document.getElementById('btn-submit-nis');
+        const inputNis = document.getElementById('input-nis');
+
+        // Buka modal input NIS ketika tombol Absen PKL diklik
+        btnPkl.addEventListener('click', function() {
+            nisModal.style.display = 'flex';
+            inputNis.value = "";
+            inputNis.focus();
+        });
+
+        // Tutup modal NIS
+        btnCloseNis.addEventListener('click', function() {
+            nisModal.style.display = 'none';
+        });
+
+        // Aksi Verifikasi NIS
+        btnSubmitNis.addEventListener('click', function() {
+            const nisVal = inputNis.value.trim();
+            
+            if (nisVal === "") {
+                alert("Harap masukkan NIS terlebih dahulu!");
+                return;
             }
+
+            // Ubah teks tombol menjadi loading
+            btnSubmitNis.innerText = "Memeriksa...";
+            btnSubmitNis.disabled = true;
+
+            // Memanggil API Google Sheets Apps Script menggunakan Fetch
+            fetch(`${GOOGLE_SCRIPT_URL}?nis=${nisVal}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Mengembalikan teks tombol semula
+                    btnSubmitNis.innerText = "Verifikasi & Masuk";
+                    btnSubmitNis.disabled = false;
+
+                    if (data.valid === true) {
+                        nisModal.style.display = 'none';
+                        // Jika terdaftar di Google Sheet, langsung arahkan ke link absen pkl
+                        window.location.href = "https://abuaslamuddin-art.github.io/absen-pkl/";
+                    } else {
+                        alert("Maaf, NIS Anda tidak terdaftar sebagai peserta PKL aktif!");
+                    }
+                })
+                .catch(error => {
+                    btnSubmitNis.innerText = "Verifikasi & Masuk";
+                    btnSubmitNis.disabled = false;
+                    alert("Terjadi kesalahan jaringan atau konfigurasi URL Web App salah.");
+                    console.error("Error:", error);
+                });
         });
     </script>
 
