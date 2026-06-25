@@ -3,255 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Presensi Harian SMKN 1 Pajangan</title>
+    <title>Portal Pendidikan</title>
     <style>
-        body { font-family: sans-serif; max-width: 400px; margin: auto; padding: 20px; text-align: center; }
-        
-        /* PERBAIKAN 1: Membuat ukuran video kamera responsif & membatasi tinggi agar tombol tidak tergeser ke bawah */
-        video, canvas { 
-            width: 100%; 
-            max-width: 280px; 
-            height: 210px; /* Dikunci tingginya agar hemat ruang di layar */
-            object-fit: cover; 
-            border-radius: 12px; 
-            margin-bottom: 8px; 
-            background-color: #ccc;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-        
-        input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
-        #canvas { display: none; }
-        #info-lokasi { font-weight: bold; margin-bottom: 15px; color: blue; }
-        .sukses { color: green; font-weight: bold; }
-        .gagal { color: red; font-weight: bold; }
 
-        /* Style khusus untuk tombol balik kamera */
-        .btn-switch {
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+        body {
+            background-color: #f2f5f4;
             color: #333;
+        }
+
+        /* Bagian Header Hijau Atas */
+        .header-bg {
+            background-color: #317f43; /* Warna hijau gelap persis gambar */
+            color: white;
+            padding: 40px 20px 70px 20px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .header-title {
+            font-size: 26px;
             font-weight: bold;
-            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .header-datetime {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        /* Kontainer Utama yang naik menimpa header */
+        .main-content {
+            padding: 0 20px;
+            margin-top: -35px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Style dasar untuk setiap Kartu/Card */
+        .card {
+            background-color: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+
+        /* Kartu Status Perangkat (Putih) */
+        .status-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .status-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #222;
+        }
+
+        .status-indicator {
+            font-size: 14px;
+            font-weight: bold;
+            color: #00c853; /* Hijau terang untuk Online */
+        }
+
+        .status-desc {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Kartu Tombol Aksi (Hijau) */
+        .btn-card {
+            display: block;
+            background-color: #48a04d; /* Hijau tombol */
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn-card:active {
+            background-color: #3c8a41;
+            transform: scale(0.98);
+        }
+
+        .btn-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .btn-desc {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        /* Bagian Instruksi */
+        .instructions {
+            padding: 20px 20px 40px 20px;
+        }
+
+        .instruction-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2a6a38;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .instruction-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background-color: #2a6a38;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+
+        .instruction-list {
+            padding-left: 20px;
+            font-size: 14px;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .instruction-list li {
             margin-bottom: 12px;
+            padding-left: 5px;
         }
     </style>
 </head>
 <body>
- 
-    <h2>Presensi Harian Sekolah</h2>
- 
-    <select id="kelas" required>
-        <option value="">-- Pilih Kelas --</option>
-        <option value="X DPIB A">X DPIB A</option>
-        <option value="X DPIB B">X DPIB B</option>
-        <option value="XI DPIB A">XI DPIB A</option>
-        <option value="XI DPIB B">XI DPIB B</option>
-        <option value="XII DPIB A">XII DPIB A</option>
-        <option value="XII DPIB B">XII DPIB B</option>
-        <option value="X RPL A">X RPL A</option>
-        <option value="X RPL B">X RPL B</option>
-        <option value="XI RPL A">XI RPL A</option>
-        <option value="XI RPL B">XI RPL B</option>
-        <option value="XII RPL A">XII RPL A</option>
-        <option value="XII RPL B">XII RPL B</option>
-        <option value="X K3R">X K3R</option>
-        <option value="XI K3R">XI K3R</option>
-        <option value="XII K3R">XII K3R</option>
-    </select>
 
-    <input type="number" id="nis" placeholder="Masukkan NIS" required>
-    <input type="text" id="nama" placeholder="Masukkan Nama Lengkap" required>
-    
-    <select id="status">
-        <option value="Datang">Datang</option>
-        <option value="Pulang">Pulang</option>
-        <option value="Sakit">Sakit</option>
-        <option value="Izin">Izin</option>
-    </select>
- 
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas"></canvas>
- 
-    <button type="button" class="btn-switch" id="btn-ganti-kamera">🔄 Balik Kamera (Depan/Belakang)</button>
+    <div class="header-bg">
+        <div class="header-title">Portal Pendidikan</div>
+        <div class="header-subtitle">Aplikasi Absensi & Ujian v2.0.0</div>
+        <div class="header-datetime" id="waktu-sekarang">Memuat waktu...</div>
+    </div>
 
-    <div id="info-lokasi">Mencari lokasi GPS...</div>
- 
-    <button id="btn-foto" disabled>Ambil Foto & Kirim</button>
-    <p id="status-pesan"></p>
- 
+    <div class="main-content">
+        
+        <div class="card status-card">
+            <div class="status-header">
+                <div class="status-title">Status Perangkat</div>
+                <div class="status-indicator">● Online</div>
+            </div>
+            <div class="status-desc">Aplikasi siap digunakan untuk ujian atau absen harian.</div>
+        </div>
+
+        <a href="#buka-scanner" class="card btn-card" onclick="alert('Fitur scan barcode ujian akan terbuka di sini.')">
+            <div class="btn-title">Pindai QR Ujian</div>
+            <div class="btn-desc">Ketuk untuk mulai scan soal</div>
+        </a>
+
+        <a href="https://lingqingzhu79-beep.github.io/absen-siswa-harian/" class="card btn-card">
+            <div class="btn-title">Absen Harian</div>
+            <div class="btn-desc">Mulai absensi koordinat sekolah</div>
+        </a>
+
+        <a href="https://abuaslamuddin-art.github.io/absen-pkl/" class="card btn-card">
+            <div class="btn-title">Absen PKL</div>
+            <div class="btn-desc">Mulai absensi di lokasi tempat magang/industri</div>
+        </a>
+
+    </div>
+
+    <div class="instructions">
+        <div class="instruction-title">Cara Menggunakan</div>
+        <ol class="instruction-list">
+            <li>Pastikan koneksi internet stabil sebelum beraktivitas.</li>
+            <li>Untuk Absen, klik menu Absen Harian atau Absen PKL untuk langsung menuju sistem peta radius lokasi Anda.</li>
+            <li>Untuk Ujian, mintalah QR Code soal ujian dari pengawas kelas.</li>
+            <li>Kerjakan ujian dengan jujur. Sistem mendeteksi kecurangan.</li>
+        </ol>
+    </div>
+
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const infoLokasi = document.getElementById('info-lokasi');
-        const btnFoto = document.getElementById('btn-foto');
-        const btnGantiKamera = document.getElementById('btn-ganti-kamera');
-        const statusPesan = document.getElementById('status-pesan');
-        const statusSelect = document.getElementById('status');
-        
-        let kordinatSaatIni = null;
-        let isDiDalamRadius = false;
-        
-        // Aturan posisi default: "user" = depan, "environment" = belakang
-        let posisiKamera = "user"; 
-        let streamLokal = null;
-
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5NaVnpunYFbVA7OKsI36BlANVOUXGkZH6uFZXy_awu0ViwpdTVTjgbQQ73YPBKREQ/exec";
-        const RADIUS_MAKSIMAL = 100; 
-
-        const LAT_SEKOLAH_1 = -7.8597175;  
-        const LON_SEKOLAH_1 = 110.2657585; 
-        const NAMA_KAMPUS_1 = "Kampus Utama";
-
-        const LAT_SEKOLAH_2 = -7.8938703;  
-        const LON_SEKOLAH_2 = 110.2849513; 
-        const NAMA_KAMPUS_2 = "Kampus 2";
-
-        // Fungsi Hitung Jarak (Haversine Formula)
-        function hitungJarak(lat1, lon1, lat2, lon2) {
-            const R = 6371000; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c; 
-        }
-
-        // Fungsi Atur Validasi Tombol Berdasarkan Status Absen
-        function validasiTombol() {
-            const statusSaatIni = statusSelect.value;
-            if (statusSaatIni === "Sakit" || statusSaatIni === "Izin") {
-                infoLokasi.innerHTML = `<span class='sukses'>Mode ${statusSaatIni}: Lokasi luar sekolah diizinkan.</span>`;
-                btnFoto.disabled = false;
-            } else {
-                if (isDiDalamRadius) {
-                    btnFoto.disabled = false;
-                } else {
-                    btnFoto.disabled = true;
-                }
-            }
-        }
-
-        statusSelect.addEventListener('change', validasiTombol);
- 
-        // PERBAIKAN 3: Fungsi Dinamis untuk Menyalakan Kamera Depan/Belakang
-        function jalankanKamera() {
-            // Matikan kamera yang aktif sebelumnya agar tidak bentrok
-            if (streamLokal) {
-                streamLokal.getTracks().forEach(track => track.stop());
-            }
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: posisiKamera } })
-                .then(stream => { 
-                    streamLokal = stream;
-                    video.srcObject = stream; 
-                })
-                .catch(err => { 
-                    infoLokasi.innerHTML = "<span class='gagal'>Gagal memuat lensa kamera!</span>"; 
-                });
-        }
-
-        // Jalankan aksi tombol ganti kamera saat diklik siswa
-        btnGantiKamera.addEventListener('click', () => {
-            posisiKamera = (posisiKamera === "user") ? "environment" : "user";
-            jalankanKamera();
-        });
-
-        // Nyalakan kamera pertama kali saat web terbuka
-        jalankanKamera();
- 
-        // Kunci Lokasi & Validasi Jarak Geofencing
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    const latSiswa = position.coords.latitude;
-                    const lonSiswa = position.coords.longitude;
-                    kordinatSaatIni = `${latSiswa}, ${lonSiswa}`;
-                    
-                    const jarakKeKampus1 = hitungJarak(latSiswa, lonSiswa, LAT_SEKOLAH_1, LON_SEKOLAH_1);
-                    const jarakKeKampus2 = hitungJarak(latSiswa, lonSiswa, LAT_SEKOLAH_2, LON_SEKOLAH_2);
-                    
-                    if (jarakKeKampus1 <= RADIUS_MAKSIMAL) {
-                        isDiDalamRadius = true;
-                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
-                            infoLokasi.innerHTML = `<span class='sukses'>Lokasi Cocok! Terdeteksi di ${NAMA_KAMPUS_1} (Jarak: ${Math.round(jarakKeKampus1)}m).</span>`;
-                        }
-                    } else if (jarakKeKampus2 <= RADIUS_MAKSIMAL) {
-                        isDiDalamRadius = true;
-                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
-                            infoLokasi.innerHTML = `<span class='sukses'>Lokasi Cocok! Terdeteksi di ${NAMA_KAMPUS_2} (Jarak: ${Math.round(jarakKeKampus2)}m).</span>`;
-                        }
-                    } else {
-                        isDiDalamRadius = false;
-                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
-                            const jarakTerdekat = Math.min(jarakKeKampus1, jarakKeCampus2);
-                            infoLokasi.innerHTML = `<span class='gagal'>Anda di luar area sekolah (Jarak terdekat: ${Math.round(jarakTerdekat)}m). Presensi dikunci!</span>`;
-                        }
-                    }
-                    
-                    validasiTombol();
-                },
-                (error) => { 
-                    infoLokasi.innerHTML = "<span class='gagal'>Gagal mendapatkan lokasi. Aktifkan GPS HP!</span>";
-                    isDiDalamRadius = false;
-                    validasiTombol();
-                },
-                { enableHighAccuracy: true }
-            );
-        }
- 
-        // Kirim Data
-        btnFoto.addEventListener('click', () => {
-            const kelas = document.getElementById('kelas').value;
-            const nis = document.getElementById('nis').value;
-            const nama = document.getElementById('nama').value;
-            const status = statusSelect.value;
- 
-            if (!kelas) { alert("Silakan pilih Kelas terlebih dahulu!"); return; }
-            if (!nis || !nama) { alert("NIS dan Nama harus diisi!"); return; }
+        function updateClock() {
+            const now = new Date();
+            const optionsDate = { day: 'numeric', month: 'long', year: 'numeric' };
+            const dateString = now.toLocaleDateString('id-ID', optionsDate);
             
-            if ((status === "Datang" || status === "Pulang") && !isDiDalamRadius) { 
-                alert("Anda berada di luar jangkauan sekolah!"); 
-                return; 
-            }
- 
-            statusPesan.innerHTML = "<span style='color:blue;'>Memeriksa data dan mengirim presensi...</span>";
-            btnFoto.disabled = true;
- 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
- 
-            const payload = {
-                kelas: kelas,
-                nis: nis,
-                nama: nama,
-                status: status,
-                lokasi: kordinatSaatIni,
-                foto: fotoBase64
-            };
- 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.result === "success") {
-                    statusPesan.innerHTML = "<span class='sukses'>Presensi Berhasil Diterima!</span>";
-                } else {
-                    statusPesan.innerHTML = `<span class='gagal'>${data.message}</span>`;
-                }
-                btnFoto.disabled = false;
-            })
-            .catch(error => {
-                statusPesan.innerHTML = "<span class='gagal'>Terjadi kesalahan koneksi internet.</span>";
-                btnFoto.disabled = false;
-            });
-        });
+            // Format waktu menjadi HH:MM:SS
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}:${seconds}`;
+
+            document.getElementById('waktu-sekarang').textContent = `${dateString} | ${timeString}`;
+        }
+
+        // Jalankan jam setiap detik
+        setInterval(updateClock, 1000);
+        updateClock(); // Panggilan pertama agar tidak ada delay teks
     </script>
+
 </body>
 </html>
