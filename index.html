@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Pendidikan</title>
+    <!-- Menambahkan script library untuk QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -19,31 +21,18 @@
 
         /* Bagian Header Hijau Atas */
         .header-bg {
-            background-color: #317f43; /* Warna hijau gelap persis gambar */
+            background-color: #317f43;
             color: white;
             padding: 40px 20px 70px 20px;
             border-bottom-left-radius: 10px;
             border-bottom-right-radius: 10px;
         }
 
-        .header-title {
-            font-size: 26px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
+        .header-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; }
+        .header-subtitle { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+        .header-datetime { font-size: 13px; opacity: 0.8; }
 
-        .header-subtitle {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 5px;
-        }
-
-        .header-datetime {
-            font-size: 13px;
-            opacity: 0.8;
-        }
-
-        /* Kontainer Utama yang naik menimpa header */
+        /* Kontainer Utama */
         .main-content {
             padding: 0 20px;
             margin-top: -35px;
@@ -51,7 +40,6 @@
             z-index: 2;
         }
 
-        /* Style dasar untuk setiap Kartu/Card */
         .card {
             background-color: white;
             border-radius: 20px;
@@ -60,96 +48,69 @@
             margin-bottom: 15px;
         }
 
-        /* Kartu Status Perangkat (Putih) */
-        .status-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+        /* Status Perangkat */
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .status-title { font-size: 16px; font-weight: bold; color: #222; }
+        .status-indicator { font-size: 14px; font-weight: bold; color: #00c853; }
+        .status-desc { font-size: 13px; color: #666; }
 
-        .status-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .status-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #222;
-        }
-
-        .status-indicator {
-            font-size: 14px;
-            font-weight: bold;
-            color: #00c853; /* Hijau terang untuk Online */
-        }
-
-        .status-desc {
-            font-size: 13px;
-            color: #666;
-        }
-
-        /* Kartu Tombol Aksi (Hijau) */
+        /* Tombol Aksi */
         .btn-card {
             display: block;
-            background-color: #48a04d; /* Hijau tombol */
+            background-color: #48a04d;
             color: white;
             text-decoration: none;
             transition: background-color 0.2s ease, transform 0.1s ease;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            text-align: left;
         }
 
-        .btn-card:active {
-            background-color: #3c8a41;
-            transform: scale(0.98);
+        .btn-card:active { background-color: #3c8a41; transform: scale(0.98); }
+        .btn-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; display: block; }
+        .btn-desc { font-size: 13px; opacity: 0.9; display: block; }
+
+        /* Instruksi */
+        .instructions { padding: 20px 20px 40px 20px; }
+        .instruction-title { font-size: 16px; font-weight: bold; color: #2a6a38; margin-bottom: 15px; display: flex; align-items: center; }
+        .instruction-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: #2a6a38; margin-right: 10px; border-radius: 2px; }
+        .instruction-list { padding-left: 20px; font-size: 14px; color: #444; line-height: 1.5; }
+        .instruction-list li { margin-bottom: 12px; padding-left: 5px; }
+
+        /* Modal Kamera Scanner */
+        #scanner-modal {
+            display: none; /* Sembunyikan by default */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
-        .btn-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
         }
 
-        .btn-desc {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-
-        /* Bagian Instruksi */
-        .instructions {
-            padding: 20px 20px 40px 20px;
-        }
-
-        .instruction-title {
+        .close-scanner-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
-            color: #2a6a38;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-
-        .instruction-title::before {
-            content: '';
-            display: inline-block;
-            width: 4px;
-            height: 18px;
-            background-color: #2a6a38;
-            margin-right: 10px;
-            border-radius: 2px;
-        }
-
-        .instruction-list {
-            padding-left: 20px;
-            font-size: 14px;
-            color: #444;
-            line-height: 1.5;
-        }
-
-        .instruction-list li {
-            margin-bottom: 12px;
-            padding-left: 5px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 400px;
         }
     </style>
 </head>
@@ -162,7 +123,6 @@
     </div>
 
     <div class="main-content">
-        
         <div class="card status-card">
             <div class="status-header">
                 <div class="status-title">Status Perangkat</div>
@@ -171,21 +131,21 @@
             <div class="status-desc">Aplikasi siap digunakan untuk ujian atau absen harian.</div>
         </div>
 
-        <a href="#buka-scanner" class="card btn-card" onclick="alert('Fitur scan barcode ujian akan terbuka di sini.')">
-            <div class="btn-title">Pindai QR Ujian</div>
-            <div class="btn-desc">Ketuk untuk mulai scan soal</div>
-        </a>
+        <!-- Tombol Scanner yang sudah difungsikan -->
+        <button id="btn-scan" class="card btn-card">
+            <span class="btn-title">Pindai QR Ujian</span>
+            <span class="btn-desc">Ketuk untuk mulai scan soal</span>
+        </button>
 
         <a href="https://lingqingzhu79-beep.github.io/absen-siswa-harian/" class="card btn-card">
-            <div class="btn-title">Absen Harian</div>
-            <div class="btn-desc">Mulai absensi koordinat sekolah</div>
+            <span class="btn-title">Absen Harian</span>
+            <span class="btn-desc">Mulai absensi koordinat sekolah</span>
         </a>
 
         <a href="https://abuaslamuddin-art.github.io/absen-pkl/" class="card btn-card">
-            <div class="btn-title">Absen PKL</div>
-            <div class="btn-desc">Mulai absensi di lokasi tempat magang/industri</div>
+            <span class="btn-title">Absen PKL</span>
+            <span class="btn-desc">Mulai absensi di lokasi tempat magang/industri</span>
         </a>
-
     </div>
 
     <div class="instructions">
@@ -198,24 +158,72 @@
         </ol>
     </div>
 
+    <!-- Area Layar Kamera (Disembunyikan di awal) -->
+    <div id="scanner-modal">
+        <div id="reader"></div>
+        <button id="btn-close-scan" class="close-scanner-btn">Batal & Tutup Kamera</button>
+    </div>
+
     <script>
+        // 1. Script Jam Realtime
         function updateClock() {
             const now = new Date();
             const optionsDate = { day: 'numeric', month: 'long', year: 'numeric' };
             const dateString = now.toLocaleDateString('id-ID', optionsDate);
-            
-            // Format waktu menjadi HH:MM:SS
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
-            const timeString = `${hours}:${minutes}:${seconds}`;
-
-            document.getElementById('waktu-sekarang').textContent = `${dateString} | ${timeString}`;
+            document.getElementById('waktu-sekarang').textContent = `${dateString} | ${hours}:${minutes}:${seconds}`;
         }
-
-        // Jalankan jam setiap detik
         setInterval(updateClock, 1000);
-        updateClock(); // Panggilan pertama agar tidak ada delay teks
+        updateClock();
+
+        // 2. Script QR Code Scanner
+        let html5QrCode;
+        const btnScan = document.getElementById('btn-scan');
+        const modal = document.getElementById('scanner-modal');
+        const btnClose = document.getElementById('btn-close-scan');
+
+        btnScan.addEventListener('click', function() {
+            // Tampilkan layar hitam kamera
+            modal.style.display = 'flex';
+            
+            // Inisialisasi scanner
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            // Mulai kamera belakang (environment)
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                // Jika QR berhasil dibaca:
+                (decodedText, decodedResult) => {
+                    html5QrCode.stop().then(() => {
+                        modal.style.display = 'none';
+                        // Langsung arahkan (redirect) ke web soal ujian yang didapat dari QR
+                        window.location.href = decodedText;
+                    });
+                },
+                // Jika gagal membaca per frame (diabaikan saja agar terus mencari)
+                (errorMessage) => { }
+            ).catch((err) => {
+                alert("Gagal mengakses kamera. Pastikan Anda telah mengizinkan akses kamera di browser.");
+                modal.style.display = 'none';
+            });
+        });
+
+        // Fungsi tombol tutup kamera
+        btnClose.addEventListener('click', function() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    modal.style.display = 'none';
+                }).catch(err => {
+                    modal.style.display = 'none';
+                });
+            } else {
+                modal.style.display = 'none';
+            }
+        });
     </script>
 
 </body>
