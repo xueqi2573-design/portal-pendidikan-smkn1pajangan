@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Presensi Harian SMKN 1 Pajangan</title>
+    <style>
+        body { font-family: sans-serif; max-width: 400px; margin: auto; padding: 20px; text-align: center; }
+        
+        /* PERBAIKAN 1: Membuat ukuran video kamera responsif & membatasi tinggi agar tombol tidak tergeser ke bawah */
+        video, canvas { 
+            width: 100%; 
+            max-width: 280px; 
+            height: 210px; /* Dikunci tingginya agar hemat ruang di layar */
+            object-fit: cover; 
+            border-radius: 12px; 
+            margin-bottom: 8px; 
+            background-color: #ccc;
+        }
+        
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        #canvas { display: none; }
+        #info-lokasi { font-weight: bold; margin-bottom: 15px; color: blue; }
+        .sukses { color: green; font-weight: bold; }
+        .gagal { color: red; font-weight: bold; }
+
+        /* Style khusus untuk tombol balik kamera */
+        .btn-switch {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            color: #333;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+ 
+    <h2>Presensi Harian Sekolah</h2>
+ 
+    <select id="kelas" required>
+        <option value="">-- Pilih Kelas --</option>
+        <option value="X DPIB A">X DPIB A</option>
+        <option value="X DPIB B">X DPIB B</option>
+        <option value="XI DPIB A">XI DPIB A</option>
+        <option value="XI DPIB B">XI DPIB B</option>
+        <option value="XII DPIB A">XII DPIB A</option>
+        <option value="XII DPIB B">XII DPIB B</option>
+        <option value="X RPL A">X RPL A</option>
+        <option value="X RPL B">X RPL B</option>
+        <option value="XI RPL A">XI RPL A</option>
+        <option value="XI RPL B">XI RPL B</option>
+        <option value="XII RPL A">XII RPL A</option>
+        <option value="XII RPL B">XII RPL B</option>
+        <option value="X K3R">X K3R</option>
+        <option value="XI K3R">XI K3R</option>
+        <option value="XII K3R">XII K3R</option>
+    </select>
+
+    <input type="number" id="nis" placeholder="Masukkan NIS" required>
+    <input type="text" id="nama" placeholder="Masukkan Nama Lengkap" required>
+    
+    <select id="status">
+        <option value="Datang">Datang</option>
+        <option value="Pulang">Pulang</option>
+        <option value="Sakit">Sakit</option>
+        <option value="Izin">Izin</option>
+    </select>
+ 
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+ 
+    <button type="button" class="btn-switch" id="btn-ganti-kamera">🔄 Balik Kamera (Depan/Belakang)</button>
+
+    <div id="info-lokasi">Mencari lokasi GPS...</div>
+ 
+    <button id="btn-foto" disabled>Ambil Foto & Kirim</button>
+    <p id="status-pesan"></p>
+ 
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const infoLokasi = document.getElementById('info-lokasi');
+        const btnFoto = document.getElementById('btn-foto');
+        const btnGantiKamera = document.getElementById('btn-ganti-kamera');
+        const statusPesan = document.getElementById('status-pesan');
+        const statusSelect = document.getElementById('status');
+        
+        let kordinatSaatIni = null;
+        let isDiDalamRadius = false;
+        
+        // Aturan posisi default: "user" = depan, "environment" = belakang
+        let posisiKamera = "user"; 
+        let streamLokal = null;
+
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5NaVnpunYFbVA7OKsI36BlANVOUXGkZH6uFZXy_awu0ViwpdTVTjgbQQ73YPBKREQ/exec";
+        const RADIUS_MAKSIMAL = 100; 
+
+        const LAT_SEKOLAH_1 = -7.8597175;  
+        const LON_SEKOLAH_1 = 110.2657585; 
+        const NAMA_KAMPUS_1 = "Kampus Utama";
+
+        const LAT_SEKOLAH_2 = -7.8938703;  
+        const LON_SEKOLAH_2 = 110.2849513; 
+        const NAMA_KAMPUS_2 = "Kampus 2";
+
+        // Fungsi Hitung Jarak (Haversine Formula)
+        function hitungJarak(lat1, lon1, lat2, lon2) {
+            const R = 6371000; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
+        }
+
+        // Fungsi Atur Validasi Tombol Berdasarkan Status Absen
+        function validasiTombol() {
+            const statusSaatIni = statusSelect.value;
+            if (statusSaatIni === "Sakit" || statusSaatIni === "Izin") {
+                infoLokasi.innerHTML = `<span class='sukses'>Mode ${statusSaatIni}: Lokasi luar sekolah diizinkan.</span>`;
+                btnFoto.disabled = false;
+            } else {
+                if (isDiDalamRadius) {
+                    btnFoto.disabled = false;
+                } else {
+                    btnFoto.disabled = true;
+                }
+            }
+        }
+
+        statusSelect.addEventListener('change', validasiTombol);
+ 
+        // PERBAIKAN 3: Fungsi Dinamis untuk Menyalakan Kamera Depan/Belakang
+        function jalankanKamera() {
+            // Matikan kamera yang aktif sebelumnya agar tidak bentrok
+            if (streamLokal) {
+                streamLokal.getTracks().forEach(track => track.stop());
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: posisiKamera } })
+                .then(stream => { 
+                    streamLokal = stream;
+                    video.srcObject = stream; 
+                })
+                .catch(err => { 
+                    infoLokasi.innerHTML = "<span class='gagal'>Gagal memuat lensa kamera!</span>"; 
+                });
+        }
+
+        // Jalankan aksi tombol ganti kamera saat diklik siswa
+        btnGantiKamera.addEventListener('click', () => {
+            posisiKamera = (posisiKamera === "user") ? "environment" : "user";
+            jalankanKamera();
+        });
+
+        // Nyalakan kamera pertama kali saat web terbuka
+        jalankanKamera();
+ 
+        // Kunci Lokasi & Validasi Jarak Geofencing
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const latSiswa = position.coords.latitude;
+                    const lonSiswa = position.coords.longitude;
+                    kordinatSaatIni = `${latSiswa}, ${lonSiswa}`;
+                    
+                    const jarakKeKampus1 = hitungJarak(latSiswa, lonSiswa, LAT_SEKOLAH_1, LON_SEKOLAH_1);
+                    const jarakKeKampus2 = hitungJarak(latSiswa, lonSiswa, LAT_SEKOLAH_2, LON_SEKOLAH_2);
+                    
+                    if (jarakKeKampus1 <= RADIUS_MAKSIMAL) {
+                        isDiDalamRadius = true;
+                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
+                            infoLokasi.innerHTML = `<span class='sukses'>Lokasi Cocok! Terdeteksi di ${NAMA_KAMPUS_1} (Jarak: ${Math.round(jarakKeKampus1)}m).</span>`;
+                        }
+                    } else if (jarakKeKampus2 <= RADIUS_MAKSIMAL) {
+                        isDiDalamRadius = true;
+                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
+                            infoLokasi.innerHTML = `<span class='sukses'>Lokasi Cocok! Terdeteksi di ${NAMA_KAMPUS_2} (Jarak: ${Math.round(jarakKeKampus2)}m).</span>`;
+                        }
+                    } else {
+                        isDiDalamRadius = false;
+                        if (statusSelect.value === "Datang" || statusSelect.value === "Pulang") {
+                            const jarakTerdekat = Math.min(jarakKeKampus1, jarakKeCampus2);
+                            infoLokasi.innerHTML = `<span class='gagal'>Anda di luar area sekolah (Jarak terdekat: ${Math.round(jarakTerdekat)}m). Presensi dikunci!</span>`;
+                        }
+                    }
+                    
+                    validasiTombol();
+                },
+                (error) => { 
+                    infoLokasi.innerHTML = "<span class='gagal'>Gagal mendapatkan lokasi. Aktifkan GPS HP!</span>";
+                    isDiDalamRadius = false;
+                    validasiTombol();
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+ 
+        // Kirim Data
+        btnFoto.addEventListener('click', () => {
+            const kelas = document.getElementById('kelas').value;
+            const nis = document.getElementById('nis').value;
+            const nama = document.getElementById('nama').value;
+            const status = statusSelect.value;
+ 
+            if (!kelas) { alert("Silakan pilih Kelas terlebih dahulu!"); return; }
+            if (!nis || !nama) { alert("NIS dan Nama harus diisi!"); return; }
+            
+            if ((status === "Datang" || status === "Pulang") && !isDiDalamRadius) { 
+                alert("Anda berada di luar jangkauan sekolah!"); 
+                return; 
+            }
+ 
+            statusPesan.innerHTML = "<span style='color:blue;'>Memeriksa data dan mengirim presensi...</span>";
+            btnFoto.disabled = true;
+ 
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+ 
+            const payload = {
+                kelas: kelas,
+                nis: nis,
+                nama: nama,
+                status: status,
+                lokasi: kordinatSaatIni,
+                foto: fotoBase64
+            };
+ 
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === "success") {
+                    statusPesan.innerHTML = "<span class='sukses'>Presensi Berhasil Diterima!</span>";
+                } else {
+                    statusPesan.innerHTML = `<span class='gagal'>${data.message}</span>`;
+                }
+                btnFoto.disabled = false;
+            })
+            .catch(error => {
+                statusPesan.innerHTML = "<span class='gagal'>Terjadi kesalahan koneksi internet.</span>";
+                btnFoto.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
